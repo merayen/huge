@@ -120,7 +120,7 @@ def _remote_fetch(address: SSHAddress, remote_hash: str) -> None:
 	# Send commits we have that remote is missing
 	if missing_commits := local_commits - remote_commits:
 		process = subprocess.Popen(
-			["rsync", "-ah", "--info=progress2"] +
+			["rsync", "-ahz", "--info=progress2"] +
 
 			# Source files
 			[f"{COMMITS_DIRECTORY}/{x}" for x in missing_commits] +
@@ -137,7 +137,7 @@ def _remote_fetch(address: SSHAddress, remote_hash: str) -> None:
 	# Retrieve commits from remote that we are missing
 	if missing_commits := remote_commits - local_commits:
 		process = subprocess.Popen(
-			["rsync", "-ah", "--info=progress2"] +
+			["rsync", "-ahz", "--info=progress2"] +
 
 			# Source files
 			[

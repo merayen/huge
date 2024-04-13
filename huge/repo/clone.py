@@ -74,7 +74,7 @@ def _clone_remote(address: SSHAddress) -> None:
 
 	process = subprocess.Popen(
 		[
-			"rsync", "-ah", "--info=progress2",
+			"rsync", "-ahz", "--info=progress2",
 
 			# Sources - only the files that are initially needed
 			f"{address.login}@{address.server}:{address.path}/{REPO_ID_FILE}",
