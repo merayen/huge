@@ -338,7 +338,7 @@ def status_command(opts: argparse.Namespace) -> None:
 	from huge.repo.stage import get_workspace_files, get_staged_files_2
 
 	new, changed, deleted, unchanged = get_workspace_files()
-	staged_files: set[str] = get_staged_files_2()
+	staged_files: set[str] = sorted(get_staged_files_2())
 
 	if commit_hash := get_current_commit():
 		output(f"Commit: {commit_hash}")
@@ -398,7 +398,7 @@ def test_status() -> None:
 
 	with catch_output() as out:
 		execute_cli_command(["status"])
-		assert out.getvalue() == "Not staged for commit:\n  A folder/first_file.txt\n  A .hugeignore\n"
+		assert out.getvalue() == "Not staged for commit:\n  A .hugeignore\n  A folder/first_file.txt\n"
 
 	execute_cli_command(["add", "folder", ".hugeignore"])
 	execute_cli_command(["commit"])
@@ -1129,7 +1129,7 @@ def test_ignore_files():
 		execute_cli_command(["status"])
 
 		# Assert that second_file.txt is now ignored
-		assert out.getvalue() == "Staged for commit:\n  A first_file.txt\n  A .hugeignore\n"
+		assert out.getvalue() == "Staged for commit:\n  A .hugeignore\n  A first_file.txt\n"
 
 	execute_cli_command(["commit"])
 
