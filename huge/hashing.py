@@ -1,0 +1,3 @@
+"""
+Hashing of files
+"""
