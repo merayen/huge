@@ -200,8 +200,15 @@ def checkout_commit(commit_hash: str) -> None:
 	import shutil
 	from huge import fail
 	from huge.repo.paths import CURRENT_COMMIT_FILE, FILES_DIRECTORY
+	from huge.repo.stage import get_workspace_files
 
 	ensure_commit_exists(commit_hash)
+
+	# Verify that there are no changed or deleted files
+	new, changed, deleted, unchanged = get_workspace_files()
+
+	if new or changed or deleted:
+		raise WorkspaceHasChanges
 
 	previous_commit_files = get_commit_files(get_current_commit())
 
@@ -281,6 +288,10 @@ def checkout_files(commit_hash: str, files: list[str]) -> None:
 
 # TODO merayen make sure this one is catched
 class CommitNotFound(Exception):
+	pass
+
+
+class WorkspaceHasChanges(Exception):
 	pass
 
 

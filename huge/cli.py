@@ -8,8 +8,6 @@ def run_command(*args: list[str]) -> None:
 	from huge.repo.paths import HUGE_DIRECTORY
 	from textwrap import wrap
 
-	assert isinstance(args, tuple)
-
 	COMMANDS = {
 		"init": (
 			"Initialize current folder with a .huge folder",
@@ -524,11 +522,7 @@ def test_merge() -> None:
 @require_repository
 def checkout_command(opts: argparse.Namespace) -> None:
 	from huge import fail
-	from huge.repo.commit import checkout_commit, checkout_files
-	from huge.repo.stage import get_workspace_files
-
-	# Verify that there are no changed or deleted files
-	new, changed, deleted, unchanged = get_workspace_files()
+	from huge.repo.commit import checkout_commit, checkout_files, WorkspaceHasChanges
 
 	# TODO merayen make sure that we have all the files available in .huge/storage, or we may ask user to fetch them first
 
@@ -536,11 +530,11 @@ def checkout_command(opts: argparse.Namespace) -> None:
 		checkout_files(opts.commit_hash, opts.files)
 		return
 
-	if new or changed or deleted:
+	try:
+		checkout_commit(opts.commit_hash)
+	except WorkspaceHasChanges:
 		fail("Workspace has changes. Aborted.")
 		return
-
-	checkout_commit(opts.commit_hash)
 
 
 @huge_test
