@@ -338,24 +338,20 @@ def status_command(opts: argparse.Namespace) -> None:
 	from huge.repo.stage import get_workspace_files, get_staged_files_2
 
 	new, changed, deleted, unchanged = get_workspace_files()
-	staged_files: set[str] = sorted(get_staged_files_2())
+	ordered_keys = sorted(set(new) | set(changed) | deleted | set(unchanged))
+	staged_files: list[str] = sorted(get_staged_files_2())
 
 	if commit_hash := get_current_commit():
 		output(f"Commit: {commit_hash}")
 
-	changed_text = []
+	changed_text: list[str] = []
 
 	if staged_files:
 		changed_text.append("Staged for commit:")
 
-	if new:
-		changed_text.extend(f"  A {x}" for x in new if x in staged_files)
-
-	if changed:
-		changed_text.extend(f"  C {x}" for x in changed if x in staged_files)
-
-	if deleted:
-		changed_text.extend(f"  D {x}" for x in deleted if x in staged_files)
+	changed_text.extend(f"  A {x}" for x in ordered_keys if x in staged_files and x in new)
+	changed_text.extend(f"  C {x}" for x in ordered_keys if x in staged_files and x in changed)
+	changed_text.extend(f"  D {x}" for x in ordered_keys if x in staged_files and x in deleted)
 
 	if (set(new) | set(changed) | set(deleted)).difference(set(staged_files)):
 		if changed_text:
@@ -363,14 +359,9 @@ def status_command(opts: argparse.Namespace) -> None:
 
 		changed_text.append("Not staged for commit:")
 
-	if new:
-		changed_text.extend(f"  A {x}" for x in new if x not in staged_files)
-
-	if changed:
-		changed_text.extend(f"  C {x}" for x in changed if x not in staged_files)
-
-	if deleted:
-		changed_text.extend(f"  D {x}" for x in deleted if x not in staged_files)
+	changed_text.extend(f"  A {x}" for x in ordered_keys if x not in staged_files and x in new)
+	changed_text.extend(f"  C {x}" for x in ordered_keys if x not in staged_files and x in changed)
+	changed_text.extend(f"  D {x}" for x in ordered_keys if x not in staged_files and x in deleted)
 
 	if changed_text:
 		output("\n".join(changed_text))
