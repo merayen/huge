@@ -3,12 +3,12 @@ import os
 from huge.testing import huge_test
 
 
-def execute_cli_command(args: list[str]) -> None:
+def run_command(*args: list[str]) -> None:
 	from huge import fail, output, __version__
 	from huge.repo.paths import HUGE_DIRECTORY
 	from textwrap import wrap
 
-	assert isinstance(args, list)
+	assert isinstance(args, tuple)
 
 	COMMANDS = {
 		"init": (
@@ -253,12 +253,12 @@ def init_command(opts: argparse.Namespace) -> None:
 def test_init() -> None:
 	from huge.testing import catch_fail
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	assert os.path.isdir(".huge")
 
 	with catch_fail() as out:
-		execute_cli_command(["init"])
+		run_command("init")
 		assert out.getvalue() == "Huge already initialized\n"
 
 	assert os.path.isdir(".huge/commits")
@@ -291,18 +291,18 @@ def test_commit() -> None:
 				assert content == f2.read()
 
 	with catch_fail() as out:
-		execute_cli_command(["commit"])
+		run_command("commit")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# Create a file
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
 		f.write("Content")
 
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder")
+	run_command("commit")
 
 	verify_stored_file("folder/first_file.txt")
 
@@ -311,8 +311,8 @@ def test_commit() -> None:
 		f.write("Changed")
 
 	# Commit again, but also include a message
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit", "-m", "Changing first_file.txt"])
+	run_command("add", "folder")
+	run_command("commit", "-m", "Changing first_file.txt")
 	verify_stored_file("folder/first_file.txt")
 
 	# Verify that our message is stored correctly
@@ -325,8 +325,8 @@ def test_commit() -> None:
 
 	os.remove("folder/first_file.txt")
 
-	execute_cli_command(["add", "folder", "other.txt"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder", "other.txt")
+	run_command("commit")
 	verify_stored_file("other.txt")
 
 
@@ -372,14 +372,14 @@ def test_status() -> None:
 	from huge.testing import catch_fail, catch_output
 
 	with catch_fail() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# Do a status. We don't expect any output here.
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == "Not staged for commit:\n  A .hugeignore\n"
 
 	# Add a file
@@ -388,18 +388,18 @@ def test_status() -> None:
 		pass
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == "Not staged for commit:\n  A .hugeignore\n  A folder/first_file.txt\n"
 
-	execute_cli_command(["add", "folder", ".hugeignore"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder", ".hugeignore")
+	run_command("commit")
 
 	with open(".huge/current") as f:
 		revision = f.read()
 
 	# Don't expect any output
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {revision}\n"
 
 	with open("folder/first_file.txt", "w") as f:
@@ -409,25 +409,25 @@ def test_status() -> None:
 		pass
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {revision}\nNot staged for commit:\n  A new_file.txt\n  C folder/first_file.txt\n"
 
-	execute_cli_command(["add", "folder", "new_file.txt"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder", "new_file.txt")
+	run_command("commit")
 
 	with open(".huge/current") as f:
 		revision = f.read()
 
 	# Should be no output now
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {revision}\n"
 
 	# Remove one of the files
 	os.remove("folder/first_file.txt")
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {revision}\nNot staged for commit:\n  D folder/first_file.txt\n"
 
 
@@ -457,24 +457,24 @@ def test_log() -> None:
 	from huge.testing import catch_fail, catch_output
 
 	with catch_fail() as out:
-		execute_cli_command(["log"])
+		run_command("log")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# We haven't committed anything. There should be no output
-	execute_cli_command(["log"])
+	run_command("log")
 
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
 		f.write("Content")
 
 	# Still no logs should be written
-	execute_cli_command(["log"])
+	run_command("log")
 
 	# Now we create a revision (a log entry)
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit", "--message", "Added first_file.txt"])
+	run_command("add", "folder")
+	run_command("commit", "--message", "Added first_file.txt")
 
 	# Get the log revision
 	with open(".huge/current") as f:
@@ -490,7 +490,7 @@ def test_log() -> None:
 		message = f.read()
 
 	with catch_output() as out:
-		execute_cli_command(["log"])
+		run_command("log")
 		assert out.getvalue() == f"{commit_hash} {str(timestamp)[:16]} 100%/100% {message}\n"
 
 
@@ -506,17 +506,17 @@ def test_merge() -> None:
 	from huge.testing import catch_fail
 
 	with catch_fail() as out:
-		execute_cli_command(["merge", "abcdef"])
+		run_command("merge", "abcdef")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
 		f.write("Content")
 
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder")
+	run_command("commit")
 
 	# TODO merayen implement "checkout" to continue this path
 
@@ -549,10 +549,10 @@ def test_checkout() -> None:
 
 	# TODO merayen check that all of the usages are tested
 	with catch_fail() as out:
-		execute_cli_command(["checkout", "abcdef"])
+		run_command("checkout", "abcdef")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
@@ -561,8 +561,8 @@ def test_checkout() -> None:
 	with open("second_file.txt", "w") as f:
 		f.write("Second file")
 
-	execute_cli_command(["add", "folder/first_file.txt", "second_file.txt", ".hugeignore"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder/first_file.txt", "second_file.txt", ".hugeignore")
+	run_command("commit")
 
 	with open(".huge/current") as f:
 		first_revision = f.read()
@@ -574,19 +574,19 @@ def test_checkout() -> None:
 		f.write("Second file changed")
 
 	# Make second commit
-	execute_cli_command(["add", "folder", "second_file.txt"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder", "second_file.txt")
+	run_command("commit")
 
 	with open(".huge/current") as f:
 		second_revision = f.read()
 
 	# Workspace should be clean
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {second_revision}\n"
 
 	# Check out the previous commit
-	execute_cli_command(["checkout", first_revision])
+	run_command("checkout", first_revision)
 
 	# Verify that we actually moved to the first revision
 	with open(".huge/current") as f:
@@ -604,7 +604,7 @@ def test_checkout() -> None:
 		f.write("Changed again")
 
 	with catch_fail() as out:
-		execute_cli_command(["checkout", second_revision])
+		run_command("checkout", second_revision)
 		assert out.getvalue() == "Workspace has changes. Aborted.\n"
 
 	# Manually make the file equal to to what it was in first and current revision
@@ -613,11 +613,11 @@ def test_checkout() -> None:
 
 	# Should not emit anything, meaning workspace is clean
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Commit: {first_revision}\n"
 
 	# Now check out the second file from the second revision
-	execute_cli_command(["checkout", second_revision, "folder/first_file.txt"])
+	run_command("checkout", second_revision, "folder/first_file.txt")
 
 	# Make sure the file content is the one from second_revision
 	with open("folder/first_file.txt") as f:
@@ -631,7 +631,7 @@ def test_checkout() -> None:
 	os.remove("folder/first_file.txt")
 	os.rmdir("folder")
 
-	execute_cli_command(["checkout", second_revision, "folder/first_file.txt"])
+	run_command("checkout", second_revision, "folder/first_file.txt")
 
 	# Make sure the file content is the one from second_revision again
 	with open("folder/first_file.txt") as f:
@@ -646,7 +646,7 @@ def test_add_removed_files() -> None:
 	import re
 	import shutil
 	from huge.testing import catch_output
-	execute_cli_command(["init"])
+	run_command("init")
 
 	_create_test_file("a")
 	_create_test_file("b")
@@ -654,22 +654,22 @@ def test_add_removed_files() -> None:
 	_create_test_file("c/e")
 	_create_test_file("f/g")
 
-	execute_cli_command(["add", "a", "b", "c", "f", ".hugeignore"])
+	run_command("add", "a", "b", "c", "f", ".hugeignore")
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert out.getvalue() == f"Staged for commit:\n  A .hugeignore\n  A a\n  A b\n  A c/d\n  A c/e\n  A f/g\n"
 
-	execute_cli_command(["commit"])
+	run_command("commit")
 
 	# Remove a file and a folder
 	os.remove("a")
 	shutil.rmtree("c")
 
-	execute_cli_command(["add", "a", "c", "f"])
+	run_command("add", "a", "c", "f")
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 		assert re.match("Commit: [0-9a-f]{32}\nStaged for commit:\n  D a\n  D c/d\n  D c/e\n", out.getvalue())
 
 
@@ -685,15 +685,15 @@ def test_remote_add():
 	from huge.testing import catch_error, catch_fail, catch_output, cd, temporary_repository
 
 	with catch_fail() as out:
-		execute_cli_command(["remote-add", "another_huge_repo"])
+		run_command("remote-add", "another_huge_repo")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# Verify that there are no remotes
 	assert not os.listdir(".huge/remotes")
 
-	execute_cli_command(["remote-add", "another_huge_repo"])
+	run_command("remote-add", "another_huge_repo")
 
 	# Verify that the remote was added
 	remote, = os.listdir(".huge/remotes/")
@@ -709,7 +709,7 @@ def test_remote_add():
 	):
 		with cd(other_repo):
 			# Clone the first repository we made
-			execute_cli_command(["clone", main_repo])
+			run_command("clone", main_repo)
 
 		assert out.getvalue().startswith("Fetching from ")
 		assert err.getvalue() == "Invalid address: another_huge_repo. Skipped.\n"
@@ -750,28 +750,28 @@ def test_clone():
 				yield f.read()
 
 	# Create and add a file and some history to the remote repo
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# Make sure that it isn't possible to clone into an existing repository
 	with catch_fail() as out:
-		execute_cli_command(["clone", "something"])
+		run_command("clone", "something")
 		assert out.getvalue() == "Huge already initialized\n"
 
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
 		f.write("Content")
 
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit", "--message", "First commit"])
+	run_command("add", "folder")
+	run_command("commit", "--message", "First commit")
 
 	with open("folder/first_file.txt", "w") as f:
 		f.write("ContentChanged")
 
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit", "--message", "Second commit"])
+	run_command("add", "folder")
+	run_command("commit", "--message", "Second commit")
 
 	# Add fake remote
-	execute_cli_command(["remote-add", "doesntexist"])
+	run_command("remote-add", "doesntexist")
 
 	# Get the remotes
 	main_repo_remotes = list(get_remotes())
@@ -783,11 +783,11 @@ def test_clone():
 	with temporary_repository() as other_repo:
 		with temporary_repository() as invalid_repo, cd(other_repo):
 			with catch_fail() as out:
-				execute_cli_command(["clone", invalid_repo])
+				run_command("clone", invalid_repo)
 				assert out.getvalue() == f"Invalid remote: {invalid_repo}. Skipped.\n"
 
 		with catch_output() as out, catch_error() as err, cd(other_repo):
-			execute_cli_command(["clone", main_repo])
+			run_command("clone", main_repo)
 			assert re.match("Fetching from .*\nFetching from .*\n$", out.getvalue())
 			assert err.getvalue() == "Invalid address: doesntexist. Skipped.\n"
 
@@ -805,7 +805,7 @@ def test_clone():
 
 			# Verify that the logs looks okay
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				assert re.match(
 					"[0-9a-f]{32} \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d 0%/100% Second commit\n"
 					"[0-9a-f]{32} \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d 0%/100% First commit\n",
@@ -833,22 +833,22 @@ def test_send():
 		remote_repo = os.path.join(remote_repo, "huge")
 
 		with catch_fail() as out:
-			execute_cli_command(["send", remote_repo])
+			run_command("send", remote_repo)
 			assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-		execute_cli_command(["init"])
+		run_command("init")
 
 		with open("first_file.txt", "w") as f:
 			f.write("Content")
 
-		execute_cli_command(["add", "first_file.txt", ".hugeignore"])
-		execute_cli_command(["commit"])
+		run_command("add", "first_file.txt", ".hugeignore")
+		run_command("commit")
 
 		assert len(os.listdir(".huge/storage")) == 2
 
 		# Send the repository metadata, but no commit files
 		with catch_output() as out:
-			execute_cli_command(["send", remote_repo])
+			run_command("send", remote_repo)
 			assert out.getvalue().startswith(f"Fetching from {remote_repo}")
 
 		# TODO merayen verify that we added the new remote as a remote on our side
@@ -861,7 +861,7 @@ def test_send():
 
 		# Push the current commit files
 		with catch_output() as out:
-			execute_cli_command(["push"])
+			run_command("push")
 			assert out.getvalue().startswith(f"Fetching from {remote_repo}")
 
 		# TODO merayen verify that the files are stored in the remote repository, in .huge/storage
@@ -872,7 +872,7 @@ def test_send():
 		)
 
 		with catch_output() as out:
-			execute_cli_command(["log"])
+			run_command("log")
 
 			# Check that replication statistics are updated and correct
 			assert re.match("[0-9a-f]{32} [0-9-]{10} [0-9:]{5} 100%/200%\n$", out.getvalue())
@@ -891,23 +891,23 @@ def test_fetch():
 	from huge.testing import catch_fail, catch_output, cd, temporary_repository
 
 	with catch_fail() as out:
-		execute_cli_command(["fetch"])
+		run_command("fetch")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	os.mkdir("folder")
 	with open("folder/first_file.txt", "w") as f:
 		f.write("Content")
 
-	execute_cli_command(["add", "folder"])
-	execute_cli_command(["commit"])
+	run_command("add", "folder")
+	run_command("commit")
 
 	main_repo = os.path.abspath(os.getcwd())
 
 	with temporary_repository() as other_repo:
 		with cd(other_repo), catch_output() as out:
-			execute_cli_command(["clone", main_repo])
+			run_command("clone", main_repo)
 			assert re.match("Fetching from .*\n$", out.getvalue())
 
 		other_repo = os.path.join(other_repo, os.path.split(main_repo)[1])
@@ -916,28 +916,28 @@ def test_fetch():
 		with open("folder/first_file.txt", "w") as f:
 			f.write("ContentChanged")
 
-		execute_cli_command(["add", "folder"])
-		execute_cli_command(["commit"])
+		run_command("add", "folder")
+		run_command("commit")
 
 		# Get the logs for the main repo
 		with catch_output() as out:
-			execute_cli_command(["log"])
+			run_command("log")
 			main_repo_logs = out.getvalue()
 
 		with cd(other_repo):
 			# Make sure that we have the first commit, but none of the files pulled yet (therefore 0%)
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				assert out.getvalue() == " ".join(main_repo_logs.splitlines()[1].split()[:-1]) + " 0%/100%\n"
 
 			# Now we fetch the metadata for the second commit
 			with catch_output() as out:
-				execute_cli_command(["fetch"])
+				run_command("fetch")
 				assert re.match("^Fetching from .*\n$", out.getvalue())
 
 			# Now the logs should be the same, but with 0%
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				assert out.getvalue() == "\n".join(
 					" ".join(x.split()[:-1]) + " 0%/100%"  # 0% because fetching does not retrieve files
 					for x in main_repo_logs.splitlines()
@@ -984,13 +984,13 @@ def test_push():
 	from huge.testing import catch_fail, catch_output, cd, temporary_repository
 
 	with catch_fail() as out:
-		execute_cli_command(["push"])
+		run_command("push")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	with catch_fail() as out:
-		execute_cli_command(["push"])
+		run_command("push")
 		assert out.getvalue() == "Nothing to push\n"
 
 	main_repo = os.path.abspath(os.getcwd())
@@ -1000,7 +1000,7 @@ def test_push():
 		with cd(other_repo):
 			# Clone into other_repo
 			with catch_output() as out:
-				execute_cli_command(["clone", main_repo])
+				run_command("clone", main_repo)
 				assert out.getvalue().startswith("Fetching from ")
 
 		other_repo = os.path.join(other_repo, os.path.split(main_repo)[1])
@@ -1016,25 +1016,25 @@ def test_push():
 			with open("folder/second_file.txt", "w") as f:
 				f.write("ContentSecond")
 
-			execute_cli_command(["add", "folder"])
-			execute_cli_command(["commit"])
+			run_command("add", "folder")
+			run_command("commit")
 
 			# Now only change one of the files in the next commit
 			with open("folder/second_file.txt", "w") as f:
 				f.write("ContentChanged")
 
-			execute_cli_command(["add", "folder"])
-			execute_cli_command(["commit"])
+			run_command("add", "folder")
+			run_command("commit")
 
 			# Retrieve the logs of the two commits
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				other_repo_logs = out.getvalue()
 				assert len(other_repo_logs.strip().splitlines()) == 2, "Expected two commits"
 
 			# Verify that we have two commits in this repo
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				# TODO merayen maybe we should make total_coverage to remote_coverage in the log command output
 				assert re.match(
 					"[0-9a-f]{32} \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d 100%/100%\n"
@@ -1044,14 +1044,14 @@ def test_push():
 
 			# Push the current commit, which is the second commit
 			with catch_output() as out:
-				execute_cli_command(["push"])
+				run_command("push")
 				assert re.match("Fetching from .*\nPushing files to .*", out.getvalue())
 
 		# Verify that the repository that has been pushed to has received the commit metadata and all
 		# the actual files for that commit. Since the first commit shares a file with the second commit,
 		# the first commit should automatically have 50% coverage.
 		with catch_output() as out:
-			execute_cli_command(["log"])
+			run_command("log")
 			# TODO merayen verify if the coverage numbers are correct
 			assert re.match(
 				"[0-9a-f]{32} \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d 100%/100%\n"  # Whole second commit was pushed
@@ -1074,16 +1074,16 @@ def test_pull():
 	from huge.testing import catch_fail, catch_output, cd, temporary_repository
 
 	with catch_fail() as out:
-		execute_cli_command(["pull", "123"])
+		run_command("pull", "123")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	main_repo = os.path.abspath(os.getcwd())
 
 	with temporary_repository() as other_repo:
 		with cd(other_repo), catch_output() as out:
-			execute_cli_command(["clone", main_repo])
+			run_command("clone", main_repo)
 			assert re.match("Fetching from .*\n$", out.getvalue())
 
 		other_repo = os.path.join(other_repo, os.path.split(main_repo)[1])
@@ -1094,22 +1094,22 @@ def test_pull():
 		with open("second_file.txt", "w") as f:
 			f.write("Content2")
 
-		execute_cli_command(["add", "first_file.txt", "second_file.txt"])
+		run_command("add", "first_file.txt", "second_file.txt")
 
-		execute_cli_command(["commit"])
+		run_command("commit")
 
 		with cd(other_repo):
 			with catch_output() as out:
-				execute_cli_command(["fetch"])
+				run_command("fetch")
 				assert re.match("Fetching from .*\n$", out.getvalue())
 
 			with catch_output() as out:
-				execute_cli_command(["log"])
+				run_command("log")
 				commit_hash = out.getvalue()[:32]
 
 			# Now try to checkout the commit, but we don't have the data yet
 			with catch_fail() as out:
-				execute_cli_command(["checkout", commit_hash])
+				run_command("checkout", commit_hash)
 
 				assert re.match(
 					"^ERROR: Missing one or more files locally.\n\n"
@@ -1123,11 +1123,11 @@ def test_pull():
 
 			# So now we get the actual commit data
 			with catch_output() as out:
-				execute_cli_command(["pull", commit_hash])
+				run_command("pull", commit_hash)
 				assert out.getvalue() == f"Pulling files from {main_repo}\n"
 
 			# Now we can do the checkout again
-			execute_cli_command(["checkout", commit_hash])
+			run_command("checkout", commit_hash)
 
 			with open("first_file.txt") as f:
 				assert f.read() == "Content"
@@ -1138,7 +1138,7 @@ def test_ignore_files():
 	from huge.testing import catch_fail, catch_output
 
 	with catch_output() as out:
-		execute_cli_command(["init"])
+		run_command("init")
 
 		with open("first_file.txt", "w") as f:
 			f.write("Content")
@@ -1149,34 +1149,34 @@ def test_ignore_files():
 		with open(".hugeignore", "w") as f:
 			f.write(".*second.*\n")
 
-	execute_cli_command(["add", "first_file.txt", ".hugeignore", "second_file.txt"])
+	run_command("add", "first_file.txt", ".hugeignore", "second_file.txt")
 
 	with catch_output() as out:
-		execute_cli_command(["status"])
+		run_command("status")
 
 		# Assert that second_file.txt is now ignored
 		assert out.getvalue() == "Staged for commit:\n  A .hugeignore\n  A first_file.txt\n"
 
-	execute_cli_command(["commit"])
+	run_command("commit")
 
 	# Make sure only two of the files got stored
 	assert len(os.listdir(".huge/storage")) == 2
 
 	with catch_output() as out:
-		execute_cli_command(["log"])
+		run_command("log")
 		commit_hash = out.getvalue().splitlines()[0].split()[0]
 
 	os.remove("first_file.txt")
 	os.remove("second_file.txt")
 
 	# Check out the file stored
-	execute_cli_command(["checkout", commit_hash, "first_file.txt"])
+	run_command("checkout", commit_hash, "first_file.txt")
 
 	with open("first_file.txt") as f:
 		assert f.read() == "Content"
 
 	with catch_fail() as out:
-		execute_cli_command(["checkout", commit_hash, "second_file.txt"])
+		run_command("checkout", commit_hash, "second_file.txt")
 		assert out.getvalue() == "Files not found in commit:\n  second_file.txt\n"
 
 
@@ -1213,33 +1213,33 @@ def test_drop() -> None:
 	from huge.testing import catch_fail, catch_output
 
 	with catch_fail() as out:
-		execute_cli_command(["drop", "invalid"])
+		run_command("drop", "invalid")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
 	# TODO merayen test that only the files in the commit not used by others are dropped
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	# Create two commits adding each their own file
 	with open("first_file.txt", "w") as f:
 		f.write("Content")
 
-	execute_cli_command(["add", "first_file.txt"])
-	execute_cli_command(["commit"])
+	run_command("add", "first_file.txt")
+	run_command("commit")
 
 	with open("second_file.txt", "w") as f:
 		f.write("Content2")
 
-	execute_cli_command(["add", "second_file.txt"])
-	execute_cli_command(["commit"])
+	run_command("add", "second_file.txt")
+	run_command("commit")
 
 	with catch_output() as out:
-		execute_cli_command(["log"])
+		run_command("log")
 		repo_commits = [x[:32] for x in out.getvalue().strip().splitlines()]
 
 	# Now drop the second commit, which fails because no one has a copy
 	with catch_fail() as out:
-		execute_cli_command(["drop", repo_commits[0]])
+		run_command("drop", repo_commits[0])
 		assert out.getvalue() == (
 			"The total coverage of the commits are less than 200%, meaning we could loose data.\n"
 			"If you really want to continue, run the command with --force.\n"
@@ -1275,20 +1275,20 @@ def test_remotes():
 	from huge.testing import catch_fail, catch_output, cd, temporary_repository
 
 	with catch_fail() as out:
-		execute_cli_command(["remotes"])
+		run_command("remotes")
 		assert out.getvalue() == "Not a .huge repository, or you are not in the root level of it\n"
 
-	execute_cli_command(["init"])
+	run_command("init")
 
 	main_repo = os.path.abspath(os.getcwd())
 
 	# Still no output expected
-	execute_cli_command(["remotes"])
+	run_command("remotes")
 
 	# TODO merayen rename or use tempfile.TemporaryDirectory directly. Doesn't make so much sense anymore
 	with temporary_repository() as other_repo:
 		with catch_output() as out, cd(other_repo):
-			execute_cli_command(["clone", main_repo])
+			run_command("clone", main_repo)
 			assert out.getvalue().startswith("Fetching from ")
 
 		with cd(os.path.join(other_repo, os.path.split(main_repo)[1])):
@@ -1296,7 +1296,7 @@ def test_remotes():
 
 			# Verify that we output correctly
 			with catch_output() as out:
-				execute_cli_command(["remotes"])
+				run_command("remotes")
 				assert re.match(
 					f"{remote_hash} \\d{{4}}-\\d\\d-\\d\\d \\d\\d:\\d\\d {main_repo}\n",
 					out.getvalue(),
@@ -1312,24 +1312,24 @@ def add_command(opts: argparse.Namespace) -> None:
 
 @huge_test
 def test_add() -> None:
-	execute_cli_command(["init"])
+	run_command("init")
 
 	text_file = _create_test_file()
 	other_text_file = _create_test_file("folder/other_file.txt")
 
 	assert not os.path.isfile(".huge/stage")
 
-	execute_cli_command(["add", "my_file.txt", "folder/other_file.txt"])
+	run_command("add", "my_file.txt", "folder/other_file.txt")
 
 	with open(".huge/stage") as f:
 		assert {x.strip() for x in f.read().splitlines()} == {"my_file.txt", "folder/other_file.txt"}
 
-	execute_cli_command(["reset", "."])
+	run_command("reset", ".")
 
 	assert not os.path.isfile(".huge/stage")
 
 	# Only add single file, but via folder
-	execute_cli_command(["add", "folder"])
+	run_command("add", "folder")
 
 	with open(".huge/stage") as f:
 		# Only the path to the file in the folder should be added to stage file.
@@ -1340,8 +1340,8 @@ def test_add() -> None:
 
 	_create_ignore_file(["ignored_folder"])
 
-	execute_cli_command(["add", "ignored_folder"])
-	execute_cli_command(["add", "ignored_folder/file.txt"])
+	run_command("add", "ignored_folder")
+	run_command("add", "ignored_folder/file.txt")
 
 	with open(".huge/stage") as f:
 		# Make sure that we respected .hugeignore and didn't add anymore files
@@ -1359,15 +1359,15 @@ def reset_command(opts: argparse.Namespace) -> None:
 
 @huge_test
 def test_reset() -> None:
-	execute_cli_command(["init"])
+	run_command("init")
 
 	text_file = _create_test_file()
 
-	execute_cli_command(["add", text_file])
+	run_command("add", text_file)
 
 	assert os.path.isfile(".huge/stage")
 
-	execute_cli_command(["reset", text_file])
+	run_command("reset", text_file)
 
 	assert not os.path.isfile(".huge/stage")
 
