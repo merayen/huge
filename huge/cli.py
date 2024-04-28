@@ -673,6 +673,44 @@ def test_add_removed_files() -> None:
 		assert re.match("Commit: [0-9a-f]{32}\nStaged for commit:\n  D a\n  D c/d\n  D c/e\n", out.getvalue())
 
 
+@huge_test
+def test_checkout_removed_files() -> None:
+	"""
+	Files should automatically be removed if not existing in target commit
+	"""
+	import shutil
+	from huge.testing import catch_output
+
+	run_command("init")
+	_create_test_file("a")
+	_create_test_file("b/c/d", "bcd file")
+
+	run_command("add", "a", "b", ".hugeignore")
+	run_command("commit")
+
+	os.remove("a")
+	shutil.rmtree("b")
+
+	run_command("add", "a", "b")
+	run_command("commit")
+
+	# Get commit hashes
+	with catch_output() as out:
+		run_command("log")
+		second_commit, first_commit = [x.split()[0] for x in out.getvalue().strip().splitlines()]
+
+	# Go back to first revision
+	run_command("checkout", first_commit)
+
+	# Ensure that we have the files back
+	assert set(os.listdir()) == {"a", "b", ".huge", ".hugeignore"}
+	assert _contains_contents("b/c/d", "bcd file")
+
+	# Now go to second commit again, which removed some files
+	run_command("checkout", second_commit)
+	assert set(os.listdir()) == {".huge", ".hugeignore"}  # Files should be gone
+
+
 @require_repository
 def remote_add_command(opts: argparse.Namespace) -> None:
 	from huge.repo.remote import add_remote
@@ -1388,6 +1426,14 @@ def _create_test_file(path: str = "my_file.txt", text: str = "Content") -> str:
 def _create_ignore_file(paths: list[str]) -> None:
 	with open(".hugeignore", "w") as f:
 		f.write("\n".join(paths) + "\n")
+
+
+def _contains_contents(path: str, content: str) -> bool:
+	if not os.path.isfile(path):
+		return False
+
+	with open(path) as f:
+		return f.read() == content
 
 
 if __name__ == '__main__':

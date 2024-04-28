@@ -203,6 +203,8 @@ def checkout_commit(commit_hash: str) -> None:
 
 	ensure_commit_exists(commit_hash)
 
+	previous_commit_files = get_commit_files(get_current_commit())
+
 	commit_files: dict[str, str] = get_commit_files(commit_hash)
 
 	# Verify that we actually got all the files
@@ -215,12 +217,26 @@ def checkout_commit(commit_hash: str) -> None:
 			)
 			return
 
+	# Remove files that was tracked in previous commit
+	files_to_remove = set(previous_commit_files) - set(commit_files)
+	for path in files_to_remove:
+		os.remove(path)
+
+	# Remove empty directories that was tracked in previous commit, but not in the one we checking
+	# out.
+	for path in files_to_remove:
+		while path := os.path.split(path)[0]:
+			if os.path.isdir(path) and not os.listdir(path):
+				shutil.rmtree(path)
+
+	# Copy files from the commit we are checking out
 	for path, path_sum in commit_files.items():
 		if folder_path := os.path.split(path)[0]:
 			pathlib.Path(folder_path).mkdir(parents=True, exist_ok=True)
 
 		shutil.copyfile(os.path.join(FILES_DIRECTORY, path_sum), path)
 
+	# Change the current commit
 	with open(CURRENT_COMMIT_FILE, "w") as f:
 		f.write(commit_hash)
 
