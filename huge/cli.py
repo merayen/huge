@@ -638,6 +638,41 @@ def test_checkout() -> None:
 		assert f.read() == "Changed"
 
 
+@huge_test
+def test_add_removed_files() -> None:
+	"""
+	It should be possible to stage files removed from workspace
+	"""
+	import re
+	import shutil
+	from huge.testing import catch_output
+	execute_cli_command(["init"])
+
+	_create_test_file("a")
+	_create_test_file("b")
+	_create_test_file("c/d")
+	_create_test_file("c/e")
+	_create_test_file("f/g")
+
+	execute_cli_command(["add", "a", "b", "c", "f", ".hugeignore"])
+
+	with catch_output() as out:
+		execute_cli_command(["status"])
+		assert out.getvalue() == f"Staged for commit:\n  A .hugeignore\n  A a\n  A b\n  A c/d\n  A c/e\n  A f/g\n"
+
+	execute_cli_command(["commit"])
+
+	# Remove a file and a folder
+	os.remove("a")
+	shutil.rmtree("c")
+
+	execute_cli_command(["add", "a", "c", "f"])
+
+	with catch_output() as out:
+		execute_cli_command(["status"])
+		assert re.match("Commit: [0-9a-f]{32}\nStaged for commit:\n  D a\n  D c/d\n  D c/e\n", out.getvalue())
+
+
 @require_repository
 def remote_add_command(opts: argparse.Namespace) -> None:
 	from huge.repo.remote import add_remote

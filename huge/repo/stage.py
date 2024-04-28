@@ -142,27 +142,18 @@ def mark_as_staged(paths: list[str]) -> None:
 	This is not the same as git's staging. We don't store the file in a staging
 	area; we only mark it that it should be considered for committing.
 	"""
-	import subprocess
 	from huge.repo.paths import STAGED_FILE
 
 	# TODO merayen respect .hugeignore
 
-	to_add = set()
+	to_add = {path for path in paths if os.path.isfile(path)}
+	to_remove = {path for path in paths if path not in to_add and not os.path.exists}
 
-	# First add direct paths
-	for path in paths:
-		if os.path.isfile(path):
-			to_add.add(path)
+	# Add all files inside directories that exist in the workspace
+	to_add.update(_scan_workspace_folders(paths))
 
-	folder_paths = [("\\" + x) if x.startswith("-") else x for x in paths if os.path.isdir(x)]
-
-	# Then add folders. They automatically expands to all the files
-	if folder_paths:
-		process = subprocess.Popen(["find"] + folder_paths + ["-type", "f"], stdout=subprocess.PIPE)
-		stdout, _ = process.communicate()
-		assert not process.returncode
-
-		to_add.update(x.strip() for x in stdout.decode().splitlines())
+	# Add all files that matches the ones in the commit, but not in the workspace
+	to_remove = _scan_commit_folder(paths) - to_add
 
 	# Remove files that are hit by the .hugeignore file
 	ignore_patterns: list[re.Pattern[str]] = get_ignore_patterns()
@@ -174,11 +165,16 @@ def mark_as_staged(paths: list[str]) -> None:
 				break
 
 	# Remove any stray empty path
-	to_add.discard("")
+	#to_add.discard("")
 
-	if to_add:
-		with open(STAGED_FILE, "a") as f:
-			f.write("\n".join(to_add) + "\n")
+	assert "" not in to_add
+	assert "" not in to_remove
+
+	if to_add or to_remove:
+		already_staged = get_staged_files_2()
+
+		with open(STAGED_FILE, "w") as f:
+			f.write("\n".join(sorted(already_staged | to_add | to_remove)) + "\n")
 
 
 def unmark_as_staged(paths: list[str]) -> None:
@@ -239,3 +235,35 @@ def get_ignore_patterns() -> list[re.Pattern[str]]:
 			]
 
 	return []
+
+
+def _scan_workspace_folders(paths: list[str]) -> list[str]:
+	import subprocess
+
+	folder_paths = [x for x in paths if os.path.isdir(x)]
+
+	if not folder_paths:
+		return []
+
+	# Escape folders beginning with "-" as they are read as toggle for find command
+	folder_paths = [("\\" + x) if x.startswith("-") else x for x in folder_paths]
+
+	process = subprocess.Popen(["find"] + folder_paths + ["-type", "f"], stdout=subprocess.PIPE)
+	stdout, _ = process.communicate()
+	assert not process.returncode
+
+	return [x.strip() for x in stdout.decode().splitlines()]
+
+
+def _scan_commit_folder(paths: list[str]) -> set[str]:
+	from huge.repo.commit import get_commit_files, get_current_commit
+
+	commit_paths = set(get_commit_files(get_current_commit()))
+
+	result = []
+	for path in paths:
+		path = os.path.normpath(path)
+
+		result.extend(x for x in commit_paths if x.startswith(path + "/") or x == path)
+	
+	return set(result)
