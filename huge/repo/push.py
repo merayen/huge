@@ -118,12 +118,11 @@ def _remote_push(address: SSHAddress, commit_files: list[str]) -> set[str]:
 	files_to_process = list(set(commit_files) - set(remote_files))
 
 	if files_to_process:
-		# TODO merayen evaluate if we can upload files, then rename them afterwards in one go
 		while files_to_process:
 			current_files, files_to_process = files_to_process[:500], files_to_process[500:]
 
 			process = subprocess.Popen(
-				["rsync", "-ah", "--info=progress2"] +
+				["rsync", "-ah", "--info=progress2", "--ignore-existing"] +
 
 				# Source files
 				[f"{FILES_DIRECTORY}/{x}" for x in current_files] +
