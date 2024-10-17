@@ -34,6 +34,9 @@ def get_remotes() -> Iterator[RemoteInfo]:
 	from huge.repo.paths import REMOTES_FOLDER
 
 	for x in os.listdir(REMOTES_FOLDER):
+		if os.path.isfile(os.path.join(REMOTES_FOLDER, x, "disabled")):
+			continue
+
 		with open(os.path.join(REMOTES_FOLDER, x, "address")) as f:
 			address = f.read()
 
