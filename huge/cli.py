@@ -440,7 +440,8 @@ def log_command(opts: argparse.Namespace) -> None:
 		datas = [
 			commit_info.commit_hash,
 			commit_info.timestamp.strftime("%Y-%m-%d %H:%M"),
-			f"{int(commit_info.coverage*100)}%/{int(commit_info.total_coverage*100)}%",
+			f"B={commit_info.branch}",
+			f"L={int(commit_info.coverage)} R={int(commit_info.total_coverage)}",
 		]
 
 		if commit_info.message:

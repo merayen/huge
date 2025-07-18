@@ -3,7 +3,7 @@ Commits in a repo
 """
 import datetime
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 def get_commit_hashes() -> list[str]:
@@ -28,15 +28,20 @@ class CommitInfo:
 	# Total coverage, including local
 	total_coverage: float  # 0.0 to infinity
 
+	children: set[str] = field(default_factory=set)
+	branch: int = 0
+
 
 def get_commit_infos() -> list[CommitInfo]:
 	from huge.repo.paths import COMMITS_DIRECTORY, FILES_DIRECTORY
 	from huge.repo.coverage import analyze_repository_coverages
 
-	result: list[CommitInfo] = []
+	result: dict[str, CommitInfo] = {}
 
 	files: list[tuple[str, str]]
 	available_files = set(os.listdir(FILES_DIRECTORY))
+
+	branch_counter = 0
 
 	for commit_hash in get_commit_hashes():
 		attributes = {}
@@ -53,29 +58,56 @@ def get_commit_infos() -> list[CommitInfo]:
 		else:
 			coverage = 1
 
-		result.append(
-			CommitInfo(
-				commit_hash=commit_hash,
+		result[commit_hash] = CommitInfo(
+			commit_hash=commit_hash,
 
-				timestamp=datetime.datetime.fromisoformat(
-					attributes["timestamp"],
-				).replace(
-					tzinfo=datetime.timezone.utc,
-				).astimezone(None),
+			timestamp=datetime.datetime.fromisoformat(
+				attributes["timestamp"],
+			).replace(
+				tzinfo=datetime.timezone.utc,
+			).astimezone(None),
 
-				message=attributes.get("message"),
+			message=attributes.get("message"),
 
-				parents={x.strip() for x in attributes["parents"].splitlines()},
+			parents={x.strip() for x in attributes["parents"].splitlines() if x.strip()},
 
-				files=files,
+			files=files,
 
-				coverage=coverage,
+			coverage=coverage,
 
-				total_coverage=analyze_repository_coverages(commit_hash).coverage,
-			)
+			total_coverage=analyze_repository_coverages(commit_hash).coverage,
 		)
 
-	return sorted(result, key=lambda x:x.timestamp)
+	# Set children
+	for commit_hash, commit_info in result.items():
+		for parent_commit_hash in commit_info.parents:
+			result[parent_commit_hash].children.add(commit_hash)
+
+	sorted_result = sorted(result.items(), key=lambda x:x[1].timestamp)
+
+	# Add branch markers
+	for commit_hash, commit_info in sorted_result:
+		if len(commit_info.children) > 1 or len(commit_info.parents) > 1:
+			for child_commit_hash in sorted(commit_info.children, key=lambda x:result[x].timestamp):
+				# Add branch markers to all commits in that line
+				branch_counter += 1
+				todo = [child_commit_hash]
+				done = []
+				while todo:
+					commit_hash = todo.pop(-1)
+
+					# Loops should not happen, but just in case. Such errors should probably be detected
+					# elsewhere.
+					if commit_hash in done: continue
+
+					# Commits that merges branches is the end of a branch line
+					if len(result[commit_hash].parents) > 1: continue
+
+					result[commit_hash].branch = branch_counter
+					done.append(commit_hash)
+					todo.extend(result[commit_hash].children)
+
+	return [v for k,v in sorted_result]
 
 
 def get_current_commit() -> str | None:
@@ -159,7 +191,7 @@ def create_commit(message: str | None) -> None:
 
 	# Write timestamp to commit
 	with open(os.path.join(COMMITS_DIRECTORY, commit_hash, "timestamp"), "w") as f:
-		f.write(datetime.datetime.utcnow().isoformat())
+		f.write(datetime.datetime.now(datetime.UTC).isoformat())
 
 	# Move current position to this commit
 	with open(os.path.join(CURRENT_COMMIT_FILE), "w") as f:
