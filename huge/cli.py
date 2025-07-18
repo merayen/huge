@@ -41,6 +41,22 @@ def run_command(*args: list[str]) -> None:
 			"Note that you will need to run 'huge pull' first to get up-to-date information on the "
 			"changes."
 		),
+		"branches": (
+			"List branches",
+			"A branch is made whenever a commit has a sibling.\n"
+			"E.g the initial commit A has sibling B and C, both B and C are their own branches.\n\n"
+			"This command lists commits that has started to diverge. This typically happens if e.g two "
+			"people are working on the same commit and then pushes each their own commit based on that "
+			"commit.\n\n"
+			"This command is similar to 'huge heads', though this one shows the oldest, the first "
+			"diverging commit."
+		),
+		"heads": (
+			"List headers",
+			"A head is a commit that has no children.\n\n"
+			"This command is similar to 'huge branches', though this one shows the newest, the tip of "
+			"the branch."
+		),
 		"commit": (
 			"Store a new revision",
 			"Copy the changed files into the huge repository locally. "
