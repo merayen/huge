@@ -450,15 +450,22 @@ def log_command(opts: argparse.Namespace) -> None:
 	from huge import output
 	from huge.repo.commit import get_commit_infos, CommitInfo
 
+	commit_infos: list[CommitInfo] = get_commit_infos()
+	commit_infos_by_hash: dict[str, CommitInfo] = {x.commit_hash: x for x in commit_infos}
 
 	commit_info: CommitInfo
-	for commit_info in reversed(get_commit_infos()):
+	for commit_info in reversed(commit_infos):
 		datas = [
 			commit_info.commit_hash,
 			commit_info.timestamp.strftime("%Y-%m-%d %H:%M"),
 			f"B={commit_info.branch}",
 			f"L={int(commit_info.coverage)} R={int(commit_info.total_coverage)}",
 		]
+
+		if len(commit_info.children) > 1:
+			datas.append(f"->{','.join(str(commit_infos_by_hash[x].branch) for x in commit_info.children)}")
+		else:
+			datas.append("")
 
 		if commit_info.message:
 			datas.append(commit_info.message)
@@ -769,7 +776,6 @@ def test_remote_add():
 			assert len(os.listdir(".huge/remotes")) == 2
 
 			# TODO merayen test that we actually added the remote repository to our list
-
 
 
 def clone_command(opts: argparse.Namespace) -> None:
