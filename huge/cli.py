@@ -458,14 +458,15 @@ def log_command(opts: argparse.Namespace) -> None:
 		datas = [
 			commit_info.commit_hash,
 			commit_info.timestamp.strftime("%Y-%m-%d %H:%M"),
-			f"B={commit_info.branch}",
-			f"L={int(commit_info.coverage)} R={int(commit_info.total_coverage)}",
+			f"{'L' if int(commit_info.coverage) else ''} x{int(commit_info.total_coverage)}",
 		]
 
 		if len(commit_info.children) > 1:
-			datas.append(f"->{','.join(str(commit_infos_by_hash[x].branch) for x in commit_info.children)}")
+			datas.append(
+				f"B{commit_info.branch}->{','.join(f'B{x}' for x in sorted(commit_infos_by_hash[x].branch for x in commit_info.children))}"
+			)
 		else:
-			datas.append("")
+			datas.append(f"B{commit_info.branch}")
 
 		if commit_info.message:
 			datas.append(commit_info.message)
