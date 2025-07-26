@@ -458,7 +458,7 @@ def log_command(opts: argparse.Namespace) -> None:
 		datas = [
 			commit_info.commit_hash,
 			commit_info.timestamp.strftime("%Y-%m-%d %H:%M"),
-			f"{'L' if int(commit_info.coverage) else ''} x{int(commit_info.total_coverage)}",
+			f"{'L' if int(commit_info.coverage) else ' '} x{int(commit_info.total_coverage)}",
 		]
 
 		if len(commit_info.children) > 1:
