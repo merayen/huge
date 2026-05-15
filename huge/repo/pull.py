@@ -68,7 +68,7 @@ def _remote_pull(address: SSHAddress, remaining_files: set[str]) -> None:
 			current_files, files_to_process = set(files_to_process[:500]), files_to_process[500:]
 
 			process = subprocess.Popen(
-				["rsync", "-ah", "--info=progress2"] +
+				["rsync", "-ah", "--progress"] +
 				[f"{address.login}@{address.server}:{address.path}/{FILES_DIRECTORY}/{x}" for x in current_files] +
 				[f"{d}/"],
 			)

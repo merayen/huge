@@ -1,2 +1,2 @@
 # id28 bash router code:sh
-quickcommand /home/merayen/d/Diverse/runs/git
+quickcommand "$HOME/d/Diverse/runs/git"

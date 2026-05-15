@@ -70,7 +70,7 @@ def _remote_send(parsed_address: SSHAddress) -> None:
 
 	# Send the actual repository metadata
 	process = subprocess.Popen(
-		["rsync", "-ahz", "--info=progress2"] +
+		["rsync", "-ahz", "--progress"] +
 
 		# Sources
 		[

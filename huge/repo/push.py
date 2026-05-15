@@ -122,7 +122,7 @@ def _remote_push(address: SSHAddress, commit_files: list[str]) -> set[str]:
 			current_files, files_to_process = files_to_process[:500], files_to_process[500:]
 
 			process = subprocess.Popen(
-				["rsync", "-ah", "--info=progress2", "--ignore-existing"] +
+				["rsync", "-ah", "--progress", "--ignore-existing"] +
 
 				# Source files
 				[f"{FILES_DIRECTORY}/{x}" for x in current_files] +
